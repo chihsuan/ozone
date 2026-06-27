@@ -42,15 +42,12 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
-import org.apache.hadoop.hdds.scm.container.ContainerReportHandler;
-import org.apache.hadoop.hdds.scm.container.IncrementalContainerReportHandler;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.TestDataUtil;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneVolume;
-import org.apache.hadoop.ozone.container.common.statemachine.commandhandler.DeleteContainerCommandHandler;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
@@ -59,7 +56,6 @@ import org.apache.ozone.test.GenericTestUtils;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.slf4j.event.Level;
 
 /**
  * Tests for container report handling.
@@ -70,9 +66,12 @@ public class TestContainerReportHandling {
   private static final String KEY = "key1";
 
   private static Stream<Arguments> delStatesAndReplication() {
-    // DEBUG branch: narrowed to the flaky param (DELETED + RATIS) to maximize repro signal in CI.
     return Stream.of(
-        Arguments.of(HddsProtos.LifeCycleState.DELETED, TestHelper.ReplicationInput.RATIS));
+            HddsProtos.LifeCycleState.DELETING,
+            HddsProtos.LifeCycleState.DELETED)
+        .flatMap(state -> Stream.of(
+            Arguments.of(state, TestHelper.ReplicationInput.RATIS),
+            Arguments.of(state, TestHelper.ReplicationInput.EC)));
   }
 
   /**
@@ -93,11 +92,6 @@ public class TestContainerReportHandling {
     conf.setTimeDuration(OZONE_SCM_STALENODE_INTERVAL, 3, TimeUnit.SECONDS);
     conf.setTimeDuration(OZONE_SCM_DEADNODE_INTERVAL, 6, TimeUnit.SECONDS);
     conf.setTimeDuration(HDDS_CONTAINER_REPORT_INTERVAL, 1, TimeUnit.SECONDS);
-
-    // DEBUG branch: trace SCM report handling and DN delete handling to find why the replica is never deleted.
-    GenericTestUtils.setLogLevel(ContainerReportHandler.class, Level.DEBUG);
-    GenericTestUtils.setLogLevel(IncrementalContainerReportHandler.class, Level.DEBUG);
-    GenericTestUtils.setLogLevel(DeleteContainerCommandHandler.class, Level.DEBUG);
 
     Path clusterPath = null;
     try (MiniOzoneCluster cluster = newCluster(conf, replicationInput.getNumDatanodes())) {
