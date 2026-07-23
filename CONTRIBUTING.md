@@ -223,3 +223,5 @@ Usually this can be fixed by removing the class file (outside of the IDE), but s
 ## CI
 
 The Ozone project uses Github Actions for its CI system.  The configuration is described in detail [here](.github/ci.md).
+
+<!-- labeler test -->
