@@ -24,3 +24,5 @@ SUITES=$(grep --no-filename -r '^#suite:' hadoop-ozone/dist/src/main/compose \
 
 initialization::ga_output suites \
     "$(initialization::parameters_to_json ${SUITES})"
+
+# labeler test
