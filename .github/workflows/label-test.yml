@@ -1,0 +1,29 @@
+# Test workflow for HDDS-15378 fork validation:
+# scheduled-style labeling via pr-number input, no pull_request_target.
+name: label-test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  labeler:
+    runs-on: ubuntu-latest
+    steps:
+      - name: List open PRs
+        id: prs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo 'numbers<<EOF'
+            gh pr list --repo "$GITHUB_REPOSITORY" --state open --limit 1000 --json number --jq '.[].number'
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/labeler@v6
+        with:
+          pr-number: ${{ steps.prs.outputs.numbers }}
+          sync-labels: true

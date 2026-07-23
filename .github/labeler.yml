@@ -1,0 +1,11 @@
+# Test config for HDDS-15378 fork validation (v6 syntax)
+scm:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'hadoop-hdds/server-scm/**'
+om:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'hadoop-ozone/ozone-manager/**'
+zdu:
+  - base-branch: '^HDDS-14496-zdu$'
