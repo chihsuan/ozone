@@ -156,6 +156,7 @@ jobs:
       - build
     name: Run-Split
     runs-on: ubuntu-24.04
+    timeout-minutes: 90
     strategy:
       matrix:
         split: ${{fromJson(needs.prepare-job.outputs.matrix)}}  # Define  splits
