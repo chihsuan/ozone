@@ -94,9 +94,9 @@ for i in $(seq 1 ${ITERATIONS}); do
       FAIL_FAST=true
     fi
 
-    if [[ ${irc} == 0 ]]; then
-      rm -fr "${REPORT_DIR}"
-    fi
+    # VERIFY: keep results of passing iterations too
+    find hadoop-ozone/integration-test -name '*-output.txt' -not -path '*/iteration*' \
+        -exec cp {} "${REPORT_DIR}/" \; 2>/dev/null || true
 
     REPORT_DIR="${original_report_dir}"
     echo "Iteration ${i} exit code: ${irc}" | tee -a "${REPORT_FILE}"
