@@ -235,11 +235,13 @@ public class TestDecommissionAndMaintenance {
     // In the EC case, there should be 5 online
     waitForContainerReplicas(ecContainer, 5);
 
-    cluster.restartHddsDatanode(dnIndex, true);
+    cluster.restartHddsDatanode(dnIndex, false);
+    waitForDnToReachHealthState(nm, toDecommission, HEALTHY);
+    DatanodeDetails restarted = nm.getNode(dnID);
     scmClient.recommissionNodes(Arrays.asList(
-        getDNHostAndPort(toDecommission)));
-    waitForDnToReachOpState(nm, toDecommission, IN_SERVICE);
-    waitForDnToReachPersistedOpState(toDecommission, IN_SERVICE);
+        getDNHostAndPort(restarted)));
+    waitForDnToReachOpState(nm, restarted, IN_SERVICE);
+    waitForDnToReachPersistedOpState(restarted, IN_SERVICE);
   }
 
   @Test
