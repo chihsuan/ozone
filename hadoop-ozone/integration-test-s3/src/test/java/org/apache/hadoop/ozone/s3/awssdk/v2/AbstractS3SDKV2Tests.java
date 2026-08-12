@@ -137,6 +137,8 @@ import software.amazon.awssdk.services.s3.model.GetBucketAclRequest;
 import software.amazon.awssdk.services.s3.model.GetBucketLifecycleConfigurationResponse;
 import software.amazon.awssdk.services.s3.model.GetBucketTaggingRequest;
 import software.amazon.awssdk.services.s3.model.GetBucketTaggingResponse;
+import software.amazon.awssdk.services.s3.model.GetObjectAttributesRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectAttributesResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectTaggingRequest;
@@ -158,7 +160,9 @@ import software.amazon.awssdk.services.s3.model.ListObjectsResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.ListPartsRequest;
+import software.amazon.awssdk.services.s3.model.MetadataDirective;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.ObjectAttributes;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutBucketAclRequest;
 import software.amazon.awssdk.services.s3.model.PutBucketTaggingRequest;
@@ -1303,6 +1307,40 @@ public abstract class AbstractS3SDKV2Tests extends OzoneTestBase implements NonH
   }
 
   @Test
+  public void testCopyObjectToSelfWithMetadataReplace() {
+    final String bucketName = getBucketName();
+    final String key = getKeyName();
+    final String content = "bar";
+    s3Client.createBucket(b -> b.bucket(bucketName));
+    s3Client.putObject(b -> b.bucket(bucketName).key(key).metadata(Collections.singletonMap("meta1", "v1")),
+        RequestBody.fromString(content));
+
+    // Copying an object onto itself is allowed when the metadata is replaced.
+    CopyObjectRequest copyReq = CopyObjectRequest.builder()
+        .sourceBucket(bucketName)
+        .sourceKey(key)
+        .destinationBucket(bucketName)
+        .destinationKey(key)
+        .metadataDirective(MetadataDirective.REPLACE)
+        .metadata(Collections.singletonMap("meta2", "v2"))
+        .build();
+
+    CopyObjectResponse copyObjectResponse = assertDoesNotThrow(() -> s3Client.copyObject(copyReq));
+    assertNotNull(copyObjectResponse.copyObjectResult().eTag());
+
+    // The metadata was replaced in place: the new entry is present and the old one is gone.
+    HeadObjectResponse head = s3Client.headObject(b -> b.bucket(bucketName).key(key));
+    assertThat(head.metadata())
+        .containsEntry("meta2", "v2")
+        .doesNotContainKey("meta1");
+
+    // The object is still readable with its original content after the in-place copy.
+    ResponseBytes<GetObjectResponse> objectBytes = s3Client.getObjectAsBytes(
+        b -> b.bucket(bucketName).key(key));
+    assertEquals(content, objectBytes.asUtf8String());
+  }
+
+  @Test
   public void testCopyObjectWithSourceIfMatch() {
     final String sourceBucketName = getBucketName("source");
     final String destBucketName = getBucketName("dest");
@@ -1675,6 +1713,93 @@ public abstract class AbstractS3SDKV2Tests extends OzoneTestBase implements NonH
     HeadObjectResponse head = s3Client.headObject(b -> b.bucket(bucketName).key(keyName));
     assertNotNull(head.tagCount());
     assertEquals(tags.size(), head.tagCount().intValue());
+  }
+
+  @Test
+  public void testGetObjectAttributes() {
+    final String bucketName = getBucketName();
+    final String keyName = getKeyName();
+    final String content = "get-object-attributes-content";
+    s3Client.createBucket(b -> b.bucket(bucketName));
+
+    PutObjectResponse putObjectResponse = s3Client.putObject(b -> b.bucket(bucketName).key(keyName),
+        RequestBody.fromString(content));
+
+    GetObjectAttributesResponse attributesResponse = s3Client.getObjectAttributes(
+        GetObjectAttributesRequest.builder()
+            .bucket(bucketName)
+            .key(keyName)
+            .objectAttributes(ObjectAttributes.E_TAG, ObjectAttributes.OBJECT_SIZE,
+                ObjectAttributes.STORAGE_CLASS)
+            .build());
+
+    assertNotNull(attributesResponse.lastModified());
+    assertEquals(
+        putObjectResponse.eTag().replace("\"", ""),
+        attributesResponse.eTag());
+    assertEquals((long) content.length(), attributesResponse.objectSize());
+    assertEquals("STANDARD", attributesResponse.storageClassAsString());
+    assertNull(attributesResponse.objectParts());
+  }
+
+  @Test
+  public void testGetObjectAttributesMultipartObjectParts(@TempDir Path tempDir) throws Exception {
+    final String bucketName = getBucketName();
+    final String keyName = getKeyName();
+
+    s3Client.createBucket(b -> b.bucket(bucketName));
+
+    File multipartUploadFile = Files.createFile(tempDir.resolve("get-object-attributes-mpu.txt")).toFile();
+    createFile(multipartUploadFile, (int) (15 * MB));
+    multipartUpload(bucketName, keyName, multipartUploadFile, (int) (5 * MB), new HashMap<>(),
+        Collections.emptyList());
+
+    GetObjectAttributesResponse attributesResponse = s3Client.getObjectAttributes(
+        GetObjectAttributesRequest.builder()
+            .bucket(bucketName)
+            .key(keyName)
+            .objectAttributes(ObjectAttributes.OBJECT_PARTS, ObjectAttributes.E_TAG,
+                ObjectAttributes.OBJECT_SIZE)
+            .build());
+
+    assertNotNull(attributesResponse.eTag());
+    assertTrue(attributesResponse.eTag().contains("-"));
+    assertEquals(multipartUploadFile.length(), attributesResponse.objectSize());
+    assertNotNull(attributesResponse.objectParts());
+    assertEquals(3, attributesResponse.objectParts().totalPartsCount());
+    assertFalse(attributesResponse.objectParts().isTruncated());
+  }
+
+  @Test
+  public void testGetObjectAttributesNoSuchKey() {
+    final String bucketName = getBucketName();
+    final String keyName = getKeyName();
+    s3Client.createBucket(b -> b.bucket(bucketName));
+
+    assertThrows(NoSuchKeyException.class, () -> s3Client.getObjectAttributes(
+        GetObjectAttributesRequest.builder()
+            .bucket(bucketName)
+            .key(keyName)
+            .objectAttributes(ObjectAttributes.E_TAG)
+            .build()));
+  }
+
+  @Test
+  public void testGetObjectAttributesChecksumOmitted() {
+    final String bucketName = getBucketName();
+    final String keyName = getKeyName();
+    s3Client.createBucket(b -> b.bucket(bucketName));
+    s3Client.putObject(b -> b.bucket(bucketName).key(keyName), RequestBody.fromString("checksum-test"));
+
+    GetObjectAttributesResponse attributesResponse = s3Client.getObjectAttributes(
+        GetObjectAttributesRequest.builder()
+            .bucket(bucketName)
+            .key(keyName)
+            .objectAttributes(ObjectAttributes.CHECKSUM, ObjectAttributes.E_TAG)
+            .build());
+
+    assertNotNull(attributesResponse.eTag());
+    assertNull(attributesResponse.checksum());
   }
 
   @Test
