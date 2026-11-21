@@ -40,6 +40,7 @@ import java.util.stream.Stream;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.OzoneClientConfig;
 import org.apache.hadoop.hdds.scm.XceiverClientRatis;
@@ -274,7 +275,7 @@ class TestBlockOutputStreamWithFailures {
   @MethodSource("clientParameters")
   void test2DatanodesFailure(boolean flushDelay, boolean enablePiggybacking) throws Exception {
     OzoneClientConfig config = newClientConfig(cluster.getConf(), flushDelay, enablePiggybacking);
-    try (OzoneClient client = newClient(cluster.getConf(), config)) {
+    try (OzoneClient client = newClient(fastFailConf(), config)) {
       String keyName = getKeyName();
       int dataLength = MAX_FLUSH_SIZE + CHUNK_SIZE;
       byte[] data1 = RandomUtils.secure().randomBytes(dataLength);
@@ -579,7 +580,7 @@ class TestBlockOutputStreamWithFailures {
   @MethodSource("clientParameters")
   void testDatanodeFailureWithSingleNode(boolean flushDelay, boolean enablePiggybacking) throws Exception {
     OzoneClientConfig config = newClientConfig(cluster.getConf(), flushDelay, enablePiggybacking);
-    try (OzoneClient client = newClient(cluster.getConf(), config)) {
+    try (OzoneClient client = newClient(fastFailConf(), config)) {
       String keyName = getKeyName();
       int dataLength = MAX_FLUSH_SIZE + CHUNK_SIZE;
       byte[] data1 = RandomUtils.secure().randomBytes(dataLength);
@@ -669,7 +670,7 @@ class TestBlockOutputStreamWithFailures {
   void testDatanodeFailureWithPreAllocation(boolean flushDelay, boolean enablePiggybacking)
       throws Exception {
     OzoneClientConfig config = newClientConfig(cluster.getConf(), flushDelay, enablePiggybacking);
-    try (OzoneClient client = newClient(cluster.getConf(), config)) {
+    try (OzoneClient client = newClient(fastFailConf(), config)) {
       String keyName = getKeyName();
       int dataLength = MAX_FLUSH_SIZE + CHUNK_SIZE;
       byte[] data1 = RandomUtils.secure().randomBytes(dataLength);
@@ -755,6 +756,16 @@ class TestBlockOutputStreamWithFailures {
       byte[] bytes = ArrayUtils.addAll(data1, data1);
       validateData(keyName, bytes, client.getObjectStore(), VOLUME, BUCKET);
     }
+  }
+
+  // Experiment: a client that gives up quickly, for failures it cannot recover from.
+  private OzoneConfiguration fastFailConf() {
+    OzoneConfiguration copy = new OzoneConfiguration(cluster.getConf());
+    org.apache.hadoop.hdds.ratis.conf.RatisClientConfig ratis =
+        copy.getObject(org.apache.hadoop.hdds.ratis.conf.RatisClientConfig.class);
+    ratis.setWriteRequestTimeout(java.time.Duration.ofSeconds(1));
+    copy.setFromObject(ratis);
+    return copy;
   }
 
   private void stopAndRemove(DatanodeDetails dn) throws IOException {

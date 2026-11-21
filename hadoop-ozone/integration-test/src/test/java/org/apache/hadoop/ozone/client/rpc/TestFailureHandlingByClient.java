@@ -146,7 +146,12 @@ public class TestFailureHandlingByClient {
     cluster = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(10).build();
     cluster.waitForClusterToBeReady();
-    client = OzoneClientFactory.getRpcClient(conf);
+    // Experiment: shared client gives up quickly, for failures it cannot recover from.
+    OzoneConfiguration fastFailConf = new OzoneConfiguration(conf);
+    RatisClientConfig fastFailRatis = fastFailConf.getObject(RatisClientConfig.class);
+    fastFailRatis.setWriteRequestTimeout(Duration.ofSeconds(1));
+    fastFailConf.setFromObject(fastFailRatis);
+    client = OzoneClientFactory.getRpcClient(fastFailConf);
     objectStore = client.getObjectStore();
     keyString = UUID.randomUUID().toString();
     volumeName = "datanodefailurehandlingtest";
