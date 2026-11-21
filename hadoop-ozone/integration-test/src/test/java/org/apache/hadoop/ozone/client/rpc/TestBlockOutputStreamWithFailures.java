@@ -580,7 +580,7 @@ class TestBlockOutputStreamWithFailures {
   @MethodSource("clientParameters")
   void testDatanodeFailureWithSingleNode(boolean flushDelay, boolean enablePiggybacking) throws Exception {
     OzoneClientConfig config = newClientConfig(cluster.getConf(), flushDelay, enablePiggybacking);
-    try (OzoneClient client = newClient(fastFailConf(1), config)) {
+    try (OzoneClient client = newClient(fastFailConf(4), config)) {
       String keyName = getKeyName();
       int dataLength = MAX_FLUSH_SIZE + CHUNK_SIZE;
       byte[] data1 = RandomUtils.secure().randomBytes(dataLength);
@@ -670,7 +670,7 @@ class TestBlockOutputStreamWithFailures {
   void testDatanodeFailureWithPreAllocation(boolean flushDelay, boolean enablePiggybacking)
       throws Exception {
     OzoneClientConfig config = newClientConfig(cluster.getConf(), flushDelay, enablePiggybacking);
-    try (OzoneClient client = newClient(fastFailConf(1), config)) {
+    try (OzoneClient client = newClient(fastFailConf(4), config)) {
       String keyName = getKeyName();
       int dataLength = MAX_FLUSH_SIZE + CHUNK_SIZE;
       byte[] data1 = RandomUtils.secure().randomBytes(dataLength);

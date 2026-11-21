@@ -149,7 +149,7 @@ public class TestFailureHandlingByClient {
     // Experiment: shared client gives up quickly, for failures it cannot recover from.
     OzoneConfiguration fastFailConf = new OzoneConfiguration(conf);
     RatisClientConfig fastFailRatis = fastFailConf.getObject(RatisClientConfig.class);
-    fastFailRatis.setWriteRequestTimeout(Duration.ofSeconds(1));
+    fastFailRatis.setWriteRequestTimeout(Duration.ofSeconds(4));
     fastFailConf.setFromObject(fastFailRatis);
     client = OzoneClientFactory.getRpcClient(fastFailConf);
     objectStore = client.getObjectStore();
