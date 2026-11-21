@@ -275,7 +275,7 @@ class TestBlockOutputStreamWithFailures {
   @MethodSource("clientParameters")
   void test2DatanodesFailure(boolean flushDelay, boolean enablePiggybacking) throws Exception {
     OzoneClientConfig config = newClientConfig(cluster.getConf(), flushDelay, enablePiggybacking);
-    try (OzoneClient client = newClient(fastFailConf(), config)) {
+    try (OzoneClient client = newClient(fastFailConf(4), config)) {
       String keyName = getKeyName();
       int dataLength = MAX_FLUSH_SIZE + CHUNK_SIZE;
       byte[] data1 = RandomUtils.secure().randomBytes(dataLength);
@@ -580,7 +580,7 @@ class TestBlockOutputStreamWithFailures {
   @MethodSource("clientParameters")
   void testDatanodeFailureWithSingleNode(boolean flushDelay, boolean enablePiggybacking) throws Exception {
     OzoneClientConfig config = newClientConfig(cluster.getConf(), flushDelay, enablePiggybacking);
-    try (OzoneClient client = newClient(fastFailConf(), config)) {
+    try (OzoneClient client = newClient(fastFailConf(1), config)) {
       String keyName = getKeyName();
       int dataLength = MAX_FLUSH_SIZE + CHUNK_SIZE;
       byte[] data1 = RandomUtils.secure().randomBytes(dataLength);
@@ -670,7 +670,7 @@ class TestBlockOutputStreamWithFailures {
   void testDatanodeFailureWithPreAllocation(boolean flushDelay, boolean enablePiggybacking)
       throws Exception {
     OzoneClientConfig config = newClientConfig(cluster.getConf(), flushDelay, enablePiggybacking);
-    try (OzoneClient client = newClient(fastFailConf(), config)) {
+    try (OzoneClient client = newClient(fastFailConf(1), config)) {
       String keyName = getKeyName();
       int dataLength = MAX_FLUSH_SIZE + CHUNK_SIZE;
       byte[] data1 = RandomUtils.secure().randomBytes(dataLength);
@@ -759,11 +759,11 @@ class TestBlockOutputStreamWithFailures {
   }
 
   // Experiment: a client that gives up quickly, for failures it cannot recover from.
-  private OzoneConfiguration fastFailConf() {
+  private OzoneConfiguration fastFailConf(int seconds) {
     OzoneConfiguration copy = new OzoneConfiguration(cluster.getConf());
     org.apache.hadoop.hdds.ratis.conf.RatisClientConfig ratis =
         copy.getObject(org.apache.hadoop.hdds.ratis.conf.RatisClientConfig.class);
-    ratis.setWriteRequestTimeout(java.time.Duration.ofSeconds(1));
+    ratis.setWriteRequestTimeout(java.time.Duration.ofSeconds(seconds));
     copy.setFromObject(ratis);
     return copy;
   }
