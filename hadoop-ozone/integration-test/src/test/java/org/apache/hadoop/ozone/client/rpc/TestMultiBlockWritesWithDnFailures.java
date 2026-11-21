@@ -88,7 +88,7 @@ public class TestMultiBlockWritesWithDnFailures {
 
     RatisClientConfig ratisClientConfig =
         conf.getObject(RatisClientConfig.class);
-    ratisClientConfig.setWriteRequestTimeout(Duration.ofSeconds(30));
+    ratisClientConfig.setWriteRequestTimeout(Duration.ofSeconds(10));
     ratisClientConfig.setWatchRequestTimeout(Duration.ofSeconds(30));
     conf.setFromObject(ratisClientConfig);
 
