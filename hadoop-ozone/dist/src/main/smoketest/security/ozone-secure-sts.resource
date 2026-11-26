@@ -269,8 +269,8 @@ Assign User To Tenant And Get Credentials
     [Arguments]                   ${user}  ${tenant}
     ${output} =                   Execute                       ozone tenant --verbose user assign ${user} --tenant=${tenant}
     Should Contain                ${output}                     Assigned '${user}' to '${tenant}'
-    @{access_key_matches} =       Get Regexp Matches            ${output}    (?m)(?<=export AWS_ACCESS_KEY_ID=).*$
-    @{secret_key_matches} =       Get Regexp Matches            ${output}    (?m)(?<=export AWS_SECRET_ACCESS_KEY=).*$
+    @{access_key_matches} =       Get Regexp Matches            ${output}    (?m)(?<=export AWS_ACCESS_KEY_ID=')[^']*
+    @{secret_key_matches} =       Get Regexp Matches            ${output}    (?m)(?<=export AWS_SECRET_ACCESS_KEY=')[^']*
     ${access_key_id} =            Strip String                  ${access_key_matches[0]}
     ${secret_key} =               Strip String                  ${secret_key_matches[0]}
     [Return]                      ${access_key_id}              ${secret_key}
