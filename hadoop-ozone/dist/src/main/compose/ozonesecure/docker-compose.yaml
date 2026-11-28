@@ -40,6 +40,7 @@ services:
     command: ["/opt/hadoop/compose/common/init-kdc.sh"]
   kms:
     image: ${HADOOP_IMAGE}:${HADOOP_IMAGE_VERSION}
+    profiles: ["kms"]
     hostname: kms
     dns_search: .
     ports:

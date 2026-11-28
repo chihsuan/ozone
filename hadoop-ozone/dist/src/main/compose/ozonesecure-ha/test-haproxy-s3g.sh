@@ -23,6 +23,7 @@ COMPOSE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 export COMPOSE_DIR
 
 export SECURITY_ENABLED=true
+export COMPOSE_PROFILES=kms
 export OM_SERVICE_ID="omservice"
 export SCM=scm1.org
 export COMPOSE_FILE=docker-compose.yaml:s3-haproxy.yaml

@@ -26,6 +26,7 @@ export COMPOSE_DIR
 source "$COMPOSE_DIR/../testlib.sh"
 
 export SECURITY_ENABLED=true
+export COMPOSE_PROFILES=kms
 
 : ${OZONE_BUCKET_KEY_NAME:=key1}
 
