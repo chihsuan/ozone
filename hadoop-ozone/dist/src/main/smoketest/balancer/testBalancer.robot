@@ -46,7 +46,6 @@ Datanode In Maintenance Mode
     ${result} =             Execute                         ozone admin datanode list | grep "Operational State:*"
                             Wait Until Keyword Succeeds      30sec   5sec    Should contain   ${result}   ENTERING_MAINTENANCE
                             Wait Until Keyword Succeeds      3min    10sec   Related pipelines are closed
-                            Sleep                   60000ms
 
 Related pipelines are closed
     ${result} =         Execute          ozone admin datanode list | awk -v RS= '{$1=$1}1'|grep MAINT | sed -e 's/^.*pipelines: \\(.*\\)$/\\1/'
