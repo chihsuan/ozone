@@ -56,7 +56,7 @@ Datanode Recommission
     ${result} =             Execute                         ozone admin datanode recommission ${HOST}
                             Should Contain                  ${result}             Started recommissioning datanode
                             Wait Until Keyword Succeeds      1min    10sec    Datanode Recommission is Finished
-                            Sleep                   300000ms
+                            Sleep                   30000ms
 
 Datanode Recommission is Finished
     ${result} =             Execute                         ozone admin datanode list | grep "Operational State:*"
